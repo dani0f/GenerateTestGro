@@ -1,0 +1,67 @@
+"  
+        include gro
+        set ( "dt", 0.1 );
+        set ( "population_max", 4000 );
+        set ("signals", 1.0);
+        set ("signals_draw", 1.0);
+        grid("continuous", "gro_original", 10, 10, 8);
+        
+        iptg1 := s_signal([kdiff := 1.0, kdeg:= 0.0001]);
+        ColagenoSig := s_signal([kdiff := 1.0, kdeg:= 0.0001]);
+        ElpSig := s_signal([kdiff := 1.0, kdeg:= 0.0001]);
+
+        
+        genes([ name := "ElpOperon",
+                proteins := {"Elp","YFP"},
+                promoter := [function := "YES", transcription_factors := {"ip1"}],
+                prot_act_times := [times := {10.0,10.0,10.0}, variabilities := {4.5,6.6,6.6}],
+                prot_deg_times := [times := {10.0,10.0,10.0}, variabilities := {1.5,2.0,2.0}]
+        ]);
+        
+        genes([ name := "ColagenoOperon",
+                proteins := {"Colageno","GFP"},
+                promoter := [function := "YES", transcription_factors := {"ip1"}],
+                prot_act_times := [times := {10.0,10.0,10.0}, variabilities := {4.5,6.6,6.6}],
+                prot_deg_times := [times := {6.0,10.0,10.0}, variabilities := {1.5,2.0,2.0}]
+        ]);
+        
+        genes([ name := "UnionOperon",
+                proteins := {"union"},
+                promoter := [function := "AND", transcription_factors := {"GFP","YFP"}],
+                prot_act_times := [times := {0.1}, variabilities := {0.0}],
+                prot_deg_times := [times := {0.0}, variabilities := {0.0}]
+        ]);
+        
+        plasmids_genes([p1 := {"ElpOperon"},
+                p2 := {"ColagenoOperon"},
+                p3 := {"UnionOperon"}
+        ]);
+        //Actions
+        action({"YFP"}, "d_paint", {"0","0","1","0"});
+        action({"-YFP"}, "d_paint", {"0","0","-1","0"});
+        action({"GFP"}, "d_paint", {"1","0","0","0"});
+        action({"-GFP"}, "d_paint", {"-1","0","0","0"});
+        action({"union"}, "paint", {"0","255","0","0"});
+        action({"-union"}, "d_paint", {"0","-5","0","0"});
+        action({}, "s_get_QS", {tostring(iptg1), ">", " 0.1 ", "ip1"});
+        action({"YFP"}, "conjugate", {"p1"," 0.2 "});
+        action({"GFP"}, "conjugate", {"p2"," 0.2 "});
+        action({},"set_growth_rate",{" 0.017 "});
+        action({"Colageno"},"s_emit_signal",{tostring(ColagenoSig)," 10 ","exact"}); 
+        action({"Elp"},"s_emit_signal",{tostring(ElpSig)," 10 ","exact"}); 
+        //Programs
+        program p() :=
+        {
+                skip();
+        };
+        program main() := {
+        true:
+        {
+                s_set_signal(iptg1, 10, 0, 0);
+        }
+        c_ecolis(200,0,0,300, {"p1","p3"}, program p());
+        c_ecolis(200,0,0,300, {"p2","p3"}, program p());
+        //c_ecolis(200, 0, 0, 300, {"p1","p2","p3"}, program p());
+        
+        };
+        
